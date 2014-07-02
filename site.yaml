@@ -9,9 +9,13 @@ plugins:
     - hyde.ext.plugins.meta.TaggerPlugin
     - hyde.ext.plugins.text.SyntextPlugin
     - hyde.ext.plugins.text.TextlinksPlugin
+markdown:
+    extensions:
+        - def_list
+        - tables
+        - headerid
 context:
     data:
-        tweet_via: ringce
         menu:
             -
                 name: Home
@@ -19,12 +23,6 @@ context:
                 css_class: home
                 type: page
                 url: index.html
-            -
-                name: Portfolio
-                description: Portfolio
-                css_class: portfolio
-                type: node
-                url: portfolio
             -
                 name: Blog
                 description: Blog
@@ -39,8 +37,8 @@ context:
                 url: about.html
 meta:
     nodemeta: meta.yaml
-    created: !!timestamp 2010-01-01 00:00:00
-    author: Lakshmi Vyasarajan
+    created: !!timestamp 2014-07-01 00:00:00
+    author: Brian
 sorter:
     time:
         attr:
