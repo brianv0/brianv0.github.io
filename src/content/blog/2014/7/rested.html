@@ -9,10 +9,6 @@ tags:
     - code
 ---
 
-## DRAFT
-
-{% mark excerpt -%}
-
 I've audited a few database courses at Stanford, so I'm more relatively familiar with paxos.
 I'm also familiar with Google's Chubby, having read the paper over a few times. My interest
 in Chubby mostly comes from the fact that I work on software that is inherently "file-like", 
@@ -23,13 +19,13 @@ because all interaction with the DataCatalog was primarily local, with clients i
 directly with the database. Going forward, however, science is rapidly decentralizing, and
 the need to support remote clients means one thing: relying on port 80 and RESTful APIs.
 
-So, going forward, I realized I needed some sort of locking mechanism. I was planning on 
+Going forward, I realized I needed some sort of locking mechanism. I was planning on 
 going ahead and using ZooKeeper with this, and storing some sort of state, but I realized
 what might be more useful was if there was a true ZooKeeper RESTful client. This wouldn't 
 only be useful for the DataCatalog RESTful server (for purposes of locking), but it 
 would also be very useful for service discovery, job barriers, etc...
 
-{%- endmark %}
+{% mark excerpt -%}
 
 Of course, there exists [etcd](https://github.com/coreos/etcd), but it's a very young
 project, with core features being temporarily deprecated until they can nail the API down,
@@ -38,6 +34,8 @@ before I could multiply, and Go has almost non-existent uptake in the greater sc
 community, so that's a bit of a non-starter for me. I'm hoping to use Kafka on some 
 projects to replace a lot of what we still use email for, among other things, 
 and Kafka relies on ZooKeeper. So, if I end up using anything, it's going to be ZooKeeper.
+
+{%- endmark %}
 
 ## RESTful API?
 
@@ -68,7 +66,8 @@ that only basic usage was needed, or possibly using all of it. Other features th
 new semi-stateless client would have is that pings are now optional, and controlled 
 by `ClientCnxnState`. This makes a lot of sense for it's use as a proxy, as you end
 up with a 1:1 correspondence between the liveness of the REST client and the 
-liveness of the ZooKeeper proxy (plus additional latency).
+liveness of the ZooKeeper proxy (plus additional latency). So your client expiration
+is a bit more predictable, I think.
 
 Another features is a `disconnect` method. This just closes the socket, but does
 not explicitly end the ZooKeeper session. In my opinion, this feature is missing 
@@ -111,4 +110,22 @@ Ephemeral nodes survive through disconnects, however. Their existence is determi
 solely by the lifetime of the session. When the server doesn't hear from the client 
 in the timeout range, it assumes the client is dead, removes the watches, and reaps
 the session. This is pretty standard expected.
+
+## Other Alternatives
+
+There's now a Curator RPC proxy based on thrift which should be in the next version
+of Curator. Underneath, it still relies heavily on the current `ZooKeeper` client,
+but overall it's pretty tightly coupled to the Server, although I'm not so sure 
+about session expiration behavior. Unfortunately, I really, really need something
+I can just use over port 80, as a lot of batch farms (i.e. the grid) often allow 
+only outgoing port 80 for security reasons, and that's a use I'm targeting, as 
+we do have batch jobs that occasionally need to coordinate across continents.
+
+## Code?
+
+Still a work in progress. I'm borrowing heavily from the current RESTful contrib 
+package as well as the ZooKeeper client implementation. Currently, it's implemented
+using Jersey 2.9+, targeting standalone with Grizzly but also the option to have it
+run in a container (tomcat, etc..). It's kind of messy right now, but I hope to get 
+things tested and posted soon.
 

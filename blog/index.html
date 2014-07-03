@@ -68,20 +68,13 @@
       Posted: Wed, 03 Jul 2013
    </time>
    <a href="/blog/2014/7/rested.html"></a>
-    <p>I&#8217;ve audited a few database courses at Stanford, so I&#8217;m more relatively familiar with paxos.
-I&#8217;m also familiar with Google&#8217;s Chubby, having read the paper over a few times. My interest
-in Chubby mostly comes from the fact that I work on software that is inherently &#8220;file-like&#8221;, 
-what we call &#8220;DataCatalog&#8221; at <span class="caps">SLAC</span>. However, the DataCatalog is meant largely to be a 
-virtual file system for datasets, with some convincing features like searching metadata.
-One thing it doesn&#8217;t have, however, is a lock service. That used to not matter very much,
-because all interaction with the DataCatalog was primarily local, with clients interacting
-directly with the database. Going forward, however, science is rapidly decentralizing, and
-the need to support remote clients means one thing: relying on port 80 and RESTful&nbsp;APIs.</p>
-<p>So, going forward, I realized I needed some sort of locking mechanism. I was planning on 
-going ahead and using ZooKeeper with this, and storing some sort of state, but I realized
-what might be more useful was if there was a true ZooKeeper RESTful client. This wouldn&#8217;t 
-only be useful for the DataCatalog RESTful server (for purposes of locking), but it 
-would also be very useful for service discovery, job barriers,&nbsp;etc&#8230;</p>
+    <p>Of course, there exists <a href="https://github.com/coreos/etcd">etcd</a>, but it&#8217;s a very young
+project, with core features being temporarily deprecated until they can nail the <span class="caps">API</span> down,
+and I want something more solid. Also, it&#8217;s in Go. My boss has been using java since
+before I could multiply, and Go has almost non-existent uptake in the greater scientific
+community, so that&#8217;s a bit of a non-starter for me. I&#8217;m hoping to use Kafka on some 
+projects to replace a lot of what we still use email for, among other things, 
+and Kafka relies on ZooKeeper. So, if I end up using anything, it&#8217;s going to be&nbsp;ZooKeeper.</p>
 
 </article>
 

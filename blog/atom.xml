@@ -7,7 +7,7 @@
         <link href="/"/>
     
         
-    <updated>2014-07-03T16:25:21Z</updated>
+    <updated>2014-07-03T16:36:57Z</updated>
 
     <id>/blog/atom.xml/</id>
 
@@ -23,8 +23,7 @@
                         label="Code" />
             
             <content type="html">
-                                &lt;h2 id=&#34;draft&#34;&gt;&lt;span class=&#34;caps&#34;&gt;DRAFT&lt;/span&gt;&lt;/h2&gt;
-&lt;p&gt;I&amp;#8217;ve audited a few database courses at Stanford, so I&amp;#8217;m more relatively familiar with paxos.
+                                &lt;p&gt;I&amp;#8217;ve audited a few database courses at Stanford, so I&amp;#8217;m more relatively familiar with paxos.
 I&amp;#8217;m also familiar with Google&amp;#8217;s Chubby, having read the paper over a few times. My interest
 in Chubby mostly comes from the fact that I work on software that is inherently &amp;#8220;file-like&amp;#8221;, 
 what we call &amp;#8220;DataCatalog&amp;#8221; at &lt;span class=&#34;caps&#34;&gt;SLAC&lt;/span&gt;. However, the DataCatalog is meant largely to be a 
@@ -33,12 +32,12 @@ One thing it doesn&amp;#8217;t have, however, is a lock service. That used to no
 because all interaction with the DataCatalog was primarily local, with clients interacting
 directly with the database. Going forward, however, science is rapidly decentralizing, and
 the need to support remote clients means one thing: relying on port 80 and RESTful&amp;nbsp;APIs.&lt;/p&gt;
-&lt;p&gt;So, going forward, I realized I needed some sort of locking mechanism. I was planning on 
+&lt;p&gt;Going forward, I realized I needed some sort of locking mechanism. I was planning on 
 going ahead and using ZooKeeper with this, and storing some sort of state, but I realized
 what might be more useful was if there was a true ZooKeeper RESTful client. This wouldn&amp;#8217;t 
 only be useful for the DataCatalog RESTful server (for purposes of locking), but it 
-would also be very useful for service discovery, job barriers, etc&amp;#8230;
-Of course, there exists &lt;a href=&#34;https://github.com/coreos/etcd&#34;&gt;etcd&lt;/a&gt;, but it&amp;#8217;s a very young
+would also be very useful for service discovery, job barriers,&amp;nbsp;etc&amp;#8230;&lt;/p&gt;
+&lt;p&gt;Of course, there exists &lt;a href=&#34;https://github.com/coreos/etcd&#34;&gt;etcd&lt;/a&gt;, but it&amp;#8217;s a very young
 project, with core features being temporarily deprecated until they can nail the &lt;span class=&#34;caps&#34;&gt;API&lt;/span&gt; down,
 and I want something more solid. Also, it&amp;#8217;s in Go. My boss has been using java since
 before I could multiply, and Go has almost non-existent uptake in the greater scientific
@@ -70,7 +69,8 @@ that only basic usage was needed, or possibly using all of it. Other features th
 new semi-stateless client would have is that pings are now optional, and controlled 
 by &lt;code&gt;ClientCnxnState&lt;/code&gt;. This makes a lot of sense for it&amp;#8217;s use as a proxy, as you end
 up with a 1:1 correspondence between the liveness of the &lt;span class=&#34;caps&#34;&gt;REST&lt;/span&gt; client and the 
-liveness of the ZooKeeper proxy (plus additional&amp;nbsp;latency).&lt;/p&gt;
+liveness of the ZooKeeper proxy (plus additional latency). So your client expiration
+is a bit more predictable, I&amp;nbsp;think.&lt;/p&gt;
 &lt;p&gt;Another features is a &lt;code&gt;disconnect&lt;/code&gt; method. This just closes the socket, but does
 not explicitly end the ZooKeeper session. In my opinion, this feature is missing 
 from the current ZooKeeper client. Currently, you just basically have to kill the 
@@ -103,7 +103,21 @@ information locally&amp;nbsp;currently.&lt;/p&gt;
 &lt;p&gt;Ephemeral nodes survive through disconnects, however. Their existence is determined 
 solely by the lifetime of the session. When the server doesn&amp;#8217;t hear from the client 
 in the timeout range, it assumes the client is dead, removes the watches, and reaps
-the session. This is pretty standard&amp;nbsp;expected.&lt;/p&gt;            </content>
+the session. This is pretty standard&amp;nbsp;expected.&lt;/p&gt;
+&lt;h2 id=&#34;other-alternatives&#34;&gt;Other&amp;nbsp;Alternatives&lt;/h2&gt;
+&lt;p&gt;There&amp;#8217;s now a Curator &lt;span class=&#34;caps&#34;&gt;RPC&lt;/span&gt; proxy based on thrift which should be in the next version
+of Curator. Underneath, it still relies heavily on the current &lt;code&gt;ZooKeeper&lt;/code&gt; client,
+but overall it&amp;#8217;s pretty tightly coupled to the Server, although I&amp;#8217;m not so sure 
+about session expiration behavior. Unfortunately, I really, really need something
+I can just use over port 80, as a lot of batch farms (i.e. the grid) often allow 
+only outgoing port 80 for security reasons, and that&amp;#8217;s a use I&amp;#8217;m targeting, as 
+we do have batch jobs that occasionally need to coordinate across&amp;nbsp;continents.&lt;/p&gt;
+&lt;h2 id=&#34;code&#34;&gt;Code?&lt;/h2&gt;
+&lt;p&gt;Still a work in progress. I&amp;#8217;m borrowing heavily from the current RESTful contrib 
+package as well as the ZooKeeper client implementation. Currently, it&amp;#8217;s implemented
+using Jersey 2.9+, targeting standalone with Grizzly but also the option to have it
+run in a container (tomcat, etc..). It&amp;#8217;s kind of messy right now, but I hope to get 
+things tested and posted&amp;nbsp;soon.&lt;/p&gt;            </content>
         </entry>
             <entry>
             <title type="html">Recursive Queries in pure SQL</title>
