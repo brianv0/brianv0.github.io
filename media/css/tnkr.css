@@ -2,7 +2,12 @@ body {
     font-family: "Helvetica Neue",Helvetica,Arial,sans-serif;
     font-size: 14px;
     line-height: 20px;
-    padding-top: 80px;
+    padding-top: 0px;
+    margin: 0px;
+}
+
+* {
+  box-sizing: border-box;
 }
 
 a {
@@ -24,15 +29,23 @@ li {
 }
 
 .navbar {
-    position: fixed;
+    position: relative;
     background-color: white;
-    right: 0;
-    left: 0;
-    top: 0;
+    min-height: 40px;
     margin-bottom: 20px;
     z-index: 1000;
     box-shadow: 2px 1px whitesmoke;
-    /*background-color: #113b55;*/
+}
+
+.container:before, .container:after, .navbar:before, .navbar:after, 
+    .navbar-header:before, .navbar-header:after {
+  display: table;
+  content: " ";
+}
+
+.container:before, .container:after, .navbar:before, .navbar:after, 
+    .navbar-header:before, .navbar-header:after {
+  clear: both;
 }
 
 .brand {
