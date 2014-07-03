@@ -34,20 +34,25 @@
 <body id="{{ resource.meta.id if resource.meta.id else resource.slug }}">
 
   {% block nav %}
+  {% from "macros.j2" import render_nav with context %}
+  {{ render_nav(menu, 'main_nav') }}
+  {% endblock %}
+
+   <!--
    <div class="navbar">
     <div class="container_8">
      <div class="grid_1">
-       <a class="brand" href="#">tnkr</a>
+       <a class="brand" href="{{ base_url('#') }}">tnkr</a>
      </div>
      <div class="grid_6">
       <ul class="navlist">
-        <li><a id="blog" href="/blog">Blog</a></li>
-        <li><a href="about.html">About</a></li>
+        <li><a id="blog" href="{{ base_url('blog') }}">Blog</a></li>
+        <li><a href="{{ base_url('about.html') }}">About</a></li>
       </ul>
      </div>
     </div>
    </div>
-  {% endblock nav %}
+  -->
   <div class="clear"></div>
   {% block content %}
 

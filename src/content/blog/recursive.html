@@ -61,7 +61,8 @@ The query uses the highest lvl of the temporary table for a half-join (IN) opera
       from folder child 
       where child.parent in (select pk from filetree where lvl = :{x})
 
-And you got your code, something like this right after the first insert:
+
+And you got your code, something like this right after your first insert:
 
     :::python
     i = 0
