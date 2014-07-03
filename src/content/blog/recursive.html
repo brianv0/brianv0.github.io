@@ -1,0 +1,79 @@
+---
+title: Recursive Queries in pure SQL
+description: >
+    Smile. Laugh.
+created: !!timestamp '2014-02-01 10:00:00'
+blogdate: !!timestamp '2014-02-01 10:00:00'
+tags:
+    - happy
+    - thoughts
+---
+
+
+<h3>A note on trees</h3>
+Trees are a very common datastructure in computing. Abstract syntax trees, binary search trees, tries, file systems, etc... all tend to be trees.
+My personal favorite, one which I end up working with on a daily basis, is the <a href="http://en.wikipedia.org/wiki/Spaghetti_stack">cactus stack/spaghetti stack.</a> 
+It turns out that, thanks to indexes, this ends up mapping pretty well to a database, as each child contains information about the parent, but not the other way around 
+(as you'd typically see in a file system). A graph database would probably be a bit more ideal, as the branches would store the associativity. You could also do an additional closure
+table and store every parent-child and child-parent relationship so that all queries are just index scans, 
+but I think that typically has a bit more maintenance and storage cost than a basic tree structure would in a database.
+
+{% mark excerpt -%}
+More than a few database systems support recursive queries in a few ways. You have your Common Table Expressions (CTE), suppored by SQL Server and Postgres, 
+`CONNECT BY` statements with oracle, and I don't believe any sort of support exists in MySQL. So basically: <b>recursive queries aren't portable across different
+systems</b>. Neither are stored procedures. But both are popular because they leverage shared memory in the database. Except that we can have shared memory too. 
+We have SQL. More importantly, all of these RDBMSs have temporary tables that are more or less the same.
+
+So first, we need our table with our nodes. You might have a ROOT node, with parent == null, or you won't have a root node, and all your first level objects are root. Either is fine,
+for this example I'm having a ROOT node.
+
+{%- endmark %}
+
+
+    :::sql
+    --Folder is something like this:
+    insert into folder(pk,name) values (0,'ROOT');
+    insert into folder(pk,name,parent) values (1,'Folder1',0);
+    insert into folder(pk,name,parent) values (2,'Folder2',0);
+    insert into folder(pk,name,parent) values (3,'Folder3',0);
+    insert into folder(pk,name,parent) values (4,'Folder1_1',1);
+    insert into folder(pk,name,parent) values (5,'Folder1_2',1);
+    insert into folder(pk,name,parent) values (6,'Folder2_1',2);
+    insert into folder(pk,name,parent) values (7,'Folder3_1',3);
+
+
+So, besides our DDL create/drop our temporary table, we have to do some operatiosn with the table, namely populate it. 
+
+Since we have a root object, the easiest thing to do is to just throw that into the temporary table, with an added value 'lvl' of 0 to denote that it's at the root level. 
+
+Next, we iteratively insert into the temporary table, incrementing lvl on the client side as we go, with the following query until it stops inserting rows. 
+(In the query, this is denoted as :{x} or :{x+1}.)
+The query uses the highest lvl of the temporary table for a half-join (IN) operation for the folder table.
+
+    :::sql
+    --Filetree looks like (pk,name,parent,lvl,path)
+    insert into filetree 
+      select child.folder pk, 
+        child.name name,
+        child.parent parent, 
+        :{x+1} lvl, 
+        (select path || '/' || name from filetree where pk = child.parent) fullpath, --not necessary
+      from folder child 
+      where child.parent in (select pk from filetree where lvl = :{x})
+
+And you got your code, something like this right after the first insert:
+
+    :::python
+    i = 0
+    while(curs.rowcount > 0):
+      curs.execute(sqlstmt, x+1, x)
+      i+=1
+
+I'm not sure as to the performance of DDL and creating/dropping temporary tables across all database systems, but I was able to outperform Oracle's `CONNECT BY`
+statement by 20% even with DDL statements for my use case. In addition to that, it was much more flexible than `CONNECT BY` because `CONNECT BY` doesn't like 
+nested subqueries for it's start parameters. It's also more flexible, and I'm pretty sure it's more portable. In addition, I was able to sort my results as I 
+went, and doing a 'select * from filetree' returned them in order in oracle.
+
+Your final bit of code would actually be to populate a tree object from the results iteratively. There's different ways of doing this. 
+You could sort by lvl, parent, name, and then descend into the results and backtrack. If you keep the fullpath you can sort by that too.
+

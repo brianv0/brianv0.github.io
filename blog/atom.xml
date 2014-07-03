@@ -7,10 +7,83 @@
         <link href="/"/>
     
         
-    <updated>2014-07-02T16:13:56Z</updated>
+    <updated>2014-07-02T17:40:28Z</updated>
 
     <id>/blog/atom.xml/</id>
 
+            <entry>
+            <title type="html">Recursive Queries in pure SQL</title>
+            <author><name>Brian</name></author>
+            <link href="/blog/recursive.html"/>
+            <updated>2014-02-01T10:00:00Z</updated>
+            <published>2014-02-01T10:00:00Z</published>
+            <id>/blog/recursive.html</id>
+                        <category   scheme="/blog/tags"
+                        term="happy"
+                        label="Happy" />
+                        <category   scheme="/blog/tags"
+                        term="thoughts"
+                        label="Thoughts" />
+            
+            <content type="html">
+                                &lt;h3&gt;A note on&amp;nbsp;trees&lt;/h3&gt;
+
+&lt;p&gt;Trees are a very common datastructure in computing. Abstract syntax trees, binary search trees, tries, file systems, etc&amp;#8230; all tend to be trees.
+My personal favorite, one which I end up working with on a daily basis, is the &lt;a href=&#34;http://en.wikipedia.org/wiki/Spaghetti_stack&#34;&gt;cactus stack/spaghetti stack.&lt;/a&gt; 
+It turns out that, thanks to indexes, this ends up mapping pretty well to a database, as each child contains information about the parent, but not the other way around 
+(as you&amp;#8217;d typically see in a file system). A graph database would probably be a bit more ideal, as the branches would store the associativity. You could also do an additional closure
+table and store every parent-child and child-parent relationship so that all queries are just index scans, 
+but I think that typically has a bit more maintenance and storage cost than a basic tree structure would in a&amp;nbsp;database.&lt;/p&gt;
+&lt;p&gt;More than a few database systems support recursive queries in a few ways. You have your Common Table Expressions (&lt;span class=&#34;caps&#34;&gt;CTE&lt;/span&gt;), suppored by &lt;span class=&#34;caps&#34;&gt;SQL&lt;/span&gt; Server and Postgres, 
+&lt;code&gt;CONNECT BY&lt;/code&gt; statements with oracle, and I don&amp;#8217;t believe any sort of support exists in MySQL. So basically: &lt;b&gt;recursive queries aren&amp;#8217;t portable across different
+systems&lt;/b&gt;. Neither are stored procedures. But both are popular because they leverage shared memory in the database. Except that we can have shared memory too. 
+We have &lt;span class=&#34;caps&#34;&gt;SQL&lt;/span&gt;. More importantly, all of these RDBMSs have temporary tables that are more or less the&amp;nbsp;same.&lt;/p&gt;
+&lt;p&gt;So first, we need our table with our nodes. You might have a &lt;span class=&#34;caps&#34;&gt;ROOT&lt;/span&gt; node, with parent == null, or you won&amp;#8217;t have a root node, and all your first level objects are root. Either is fine,
+for this example I&amp;#8217;m having a &lt;span class=&#34;caps&#34;&gt;ROOT&lt;/span&gt;&amp;nbsp;node.&lt;/p&gt;
+&lt;div class=&#34;codehilite&#34;&gt;&lt;pre&gt;&lt;span class=&#34;c1&#34;&gt;--Folder is something like this:&lt;/span&gt;
+&lt;span class=&#34;k&#34;&gt;insert&lt;/span&gt; &lt;span class=&#34;k&#34;&gt;into&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;folder&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;pk&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;name&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;)&lt;/span&gt; &lt;span class=&#34;k&#34;&gt;values&lt;/span&gt; &lt;span class=&#34;p&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;mi&#34;&gt;0&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt;&lt;span class=&#34;s1&#34;&gt;&amp;#39;&lt;span class=&#34;caps&#34;&gt;ROOT&lt;/span&gt;&amp;#39;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;);&lt;/span&gt;
+&lt;span class=&#34;k&#34;&gt;insert&lt;/span&gt; &lt;span class=&#34;k&#34;&gt;into&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;folder&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;pk&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;name&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;parent&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;)&lt;/span&gt; &lt;span class=&#34;k&#34;&gt;values&lt;/span&gt; &lt;span class=&#34;p&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;mi&#34;&gt;1&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt;&lt;span class=&#34;s1&#34;&gt;&amp;#39;Folder1&amp;#39;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt;&lt;span class=&#34;mi&#34;&gt;0&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;);&lt;/span&gt;
+&lt;span class=&#34;k&#34;&gt;insert&lt;/span&gt; &lt;span class=&#34;k&#34;&gt;into&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;folder&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;pk&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;name&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;parent&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;)&lt;/span&gt; &lt;span class=&#34;k&#34;&gt;values&lt;/span&gt; &lt;span class=&#34;p&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;mi&#34;&gt;2&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt;&lt;span class=&#34;s1&#34;&gt;&amp;#39;Folder2&amp;#39;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt;&lt;span class=&#34;mi&#34;&gt;0&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;);&lt;/span&gt;
+&lt;span class=&#34;k&#34;&gt;insert&lt;/span&gt; &lt;span class=&#34;k&#34;&gt;into&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;folder&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;pk&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;name&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;parent&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;)&lt;/span&gt; &lt;span class=&#34;k&#34;&gt;values&lt;/span&gt; &lt;span class=&#34;p&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;mi&#34;&gt;3&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt;&lt;span class=&#34;s1&#34;&gt;&amp;#39;Folder3&amp;#39;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt;&lt;span class=&#34;mi&#34;&gt;0&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;);&lt;/span&gt;
+&lt;span class=&#34;k&#34;&gt;insert&lt;/span&gt; &lt;span class=&#34;k&#34;&gt;into&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;folder&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;pk&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;name&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;parent&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;)&lt;/span&gt; &lt;span class=&#34;k&#34;&gt;values&lt;/span&gt; &lt;span class=&#34;p&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;mi&#34;&gt;4&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt;&lt;span class=&#34;s1&#34;&gt;&amp;#39;Folder1_1&amp;#39;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt;&lt;span class=&#34;mi&#34;&gt;1&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;);&lt;/span&gt;
+&lt;span class=&#34;k&#34;&gt;insert&lt;/span&gt; &lt;span class=&#34;k&#34;&gt;into&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;folder&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;pk&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;name&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;parent&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;)&lt;/span&gt; &lt;span class=&#34;k&#34;&gt;values&lt;/span&gt; &lt;span class=&#34;p&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;mi&#34;&gt;5&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt;&lt;span class=&#34;s1&#34;&gt;&amp;#39;Folder1_2&amp;#39;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt;&lt;span class=&#34;mi&#34;&gt;1&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;);&lt;/span&gt;
+&lt;span class=&#34;k&#34;&gt;insert&lt;/span&gt; &lt;span class=&#34;k&#34;&gt;into&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;folder&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;pk&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;name&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;parent&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;)&lt;/span&gt; &lt;span class=&#34;k&#34;&gt;values&lt;/span&gt; &lt;span class=&#34;p&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;mi&#34;&gt;6&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt;&lt;span class=&#34;s1&#34;&gt;&amp;#39;Folder2_1&amp;#39;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt;&lt;span class=&#34;mi&#34;&gt;2&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;);&lt;/span&gt;
+&lt;span class=&#34;k&#34;&gt;insert&lt;/span&gt; &lt;span class=&#34;k&#34;&gt;into&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;folder&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;pk&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;name&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;parent&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;)&lt;/span&gt; &lt;span class=&#34;k&#34;&gt;values&lt;/span&gt; &lt;span class=&#34;p&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;mi&#34;&gt;7&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt;&lt;span class=&#34;s1&#34;&gt;&amp;#39;Folder3_1&amp;#39;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt;&lt;span class=&#34;mi&#34;&gt;3&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;);&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+
+
+&lt;p&gt;So, besides our &lt;span class=&#34;caps&#34;&gt;DDL&lt;/span&gt; create/drop our temporary table, we have to do some operatiosn with the table, namely populate&amp;nbsp;it. &lt;/p&gt;
+&lt;p&gt;Since we have a root object, the easiest thing to do is to just throw that into the temporary table, with an added value &amp;#8216;lvl&amp;#8217; of 0 to denote that it&amp;#8217;s at the root&amp;nbsp;level. &lt;/p&gt;
+&lt;p&gt;Next, we iteratively insert into the temporary table, incrementing lvl on the client side as we go, with the following query until it stops inserting rows. 
+(In the query, this is denoted as :{x} or :{x+1}.)
+The query uses the highest lvl of the temporary table for a half-join (&lt;span class=&#34;caps&#34;&gt;IN&lt;/span&gt;) operation for the folder&amp;nbsp;table.&lt;/p&gt;
+&lt;div class=&#34;codehilite&#34;&gt;&lt;pre&gt;&lt;span class=&#34;c1&#34;&gt;--Filetree looks like (pk,name,parent,lvl,path)&lt;/span&gt;
+&lt;span class=&#34;k&#34;&gt;insert&lt;/span&gt; &lt;span class=&#34;k&#34;&gt;into&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;filetree&lt;/span&gt; 
+  &lt;span class=&#34;k&#34;&gt;select&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;child&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;folder&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;pk&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt; 
+    &lt;span class=&#34;n&#34;&gt;child&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;name&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;name&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt;
+    &lt;span class=&#34;n&#34;&gt;child&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;parent&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;parent&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt; 
+    &lt;span class=&#34;p&#34;&gt;:&lt;/span&gt;&lt;span class=&#34;err&#34;&gt;{&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;x&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;+&lt;/span&gt;&lt;span class=&#34;mi&#34;&gt;1&lt;/span&gt;&lt;span class=&#34;err&#34;&gt;}&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;lvl&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt; 
+    &lt;span class=&#34;p&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;k&#34;&gt;select&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;path&lt;/span&gt; &lt;span class=&#34;o&#34;&gt;||&lt;/span&gt; &lt;span class=&#34;s1&#34;&gt;&amp;#39;/&amp;#39;&lt;/span&gt; &lt;span class=&#34;o&#34;&gt;||&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;name&lt;/span&gt; &lt;span class=&#34;k&#34;&gt;from&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;filetree&lt;/span&gt; &lt;span class=&#34;k&#34;&gt;where&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;pk&lt;/span&gt; &lt;span class=&#34;o&#34;&gt;=&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;child&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;parent&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;)&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;fullpath&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt; &lt;span class=&#34;c1&#34;&gt;--not necessary&lt;/span&gt;
+  &lt;span class=&#34;k&#34;&gt;from&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;folder&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;child&lt;/span&gt; 
+  &lt;span class=&#34;k&#34;&gt;where&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;child&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;parent&lt;/span&gt; &lt;span class=&#34;k&#34;&gt;in&lt;/span&gt; &lt;span class=&#34;p&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;k&#34;&gt;select&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;pk&lt;/span&gt; &lt;span class=&#34;k&#34;&gt;from&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;filetree&lt;/span&gt; &lt;span class=&#34;k&#34;&gt;where&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;lvl&lt;/span&gt; &lt;span class=&#34;o&#34;&gt;=&lt;/span&gt; &lt;span class=&#34;p&#34;&gt;:&lt;/span&gt;&lt;span class=&#34;err&#34;&gt;{&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;x&lt;/span&gt;&lt;span class=&#34;err&#34;&gt;}&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;)&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+
+
+&lt;p&gt;And you got your code, something like this right after the first&amp;nbsp;insert:&lt;/p&gt;
+&lt;div class=&#34;codehilite&#34;&gt;&lt;pre&gt;&lt;span class=&#34;n&#34;&gt;i&lt;/span&gt; &lt;span class=&#34;o&#34;&gt;=&lt;/span&gt; &lt;span class=&#34;mi&#34;&gt;0&lt;/span&gt;
+&lt;span class=&#34;k&#34;&gt;while&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;curs&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;rowcount&lt;/span&gt; &lt;span class=&#34;o&#34;&gt;&amp;gt;&lt;/span&gt; &lt;span class=&#34;mi&#34;&gt;0&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;):&lt;/span&gt;
+  &lt;span class=&#34;n&#34;&gt;curs&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;execute&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;sqlstmt&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;x&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;+&lt;/span&gt;&lt;span class=&#34;mi&#34;&gt;1&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;x&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;)&lt;/span&gt;
+  &lt;span class=&#34;n&#34;&gt;i&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;+=&lt;/span&gt;&lt;span class=&#34;mi&#34;&gt;1&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+
+
+&lt;p&gt;I&amp;#8217;m not sure as to the performance of &lt;span class=&#34;caps&#34;&gt;DDL&lt;/span&gt; and creating/dropping temporary tables across all database systems, but I was able to outperform Oracle&amp;#8217;s &lt;code&gt;CONNECT BY&lt;/code&gt;
+statement by 20% even with &lt;span class=&#34;caps&#34;&gt;DDL&lt;/span&gt; statements for my use case. In addition to that, it was much more flexible than &lt;code&gt;CONNECT BY&lt;/code&gt; because &lt;code&gt;CONNECT BY&lt;/code&gt; doesn&amp;#8217;t like 
+nested subqueries for it&amp;#8217;s start parameters. It&amp;#8217;s also more flexible, and I&amp;#8217;m pretty sure it&amp;#8217;s more portable. In addition, I was able to sort my results as I 
+went, and doing a &amp;#8216;select * from filetree&amp;#8217; returned them in order in&amp;nbsp;oracle.&lt;/p&gt;
+&lt;p&gt;Your final bit of code would actually be to populate a tree object from the results iteratively. There&amp;#8217;s different ways of doing this. 
+You could sort by lvl, parent, name, and then descend into the results and backtrack. If you keep the fullpath you can sort by that&amp;nbsp;too.&lt;/p&gt;            </content>
+        </entry>
             <entry>
             <title type="html">A Happy Post</title>
             <author><name>Brian</name></author>

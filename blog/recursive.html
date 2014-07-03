@@ -1,0 +1,184 @@
+<!doctype html>
+
+<head>
+    <meta charset="">
+
+  <title>Recursive Queries in pure SQL</title>
+  <meta name="description" content="Smile. Laugh.
+">
+  <meta name="author" content="Brian">
+
+  <!--  Mobile viewport optimized: j.mp/bplateviewport -->
+  <meta name="viewport" content="">
+
+    <!-- Place favicon.ico & apple-touch-icon.png
+        in the root of your domain and delete these references 
+  <link rel="shortcut icon" href="">
+  <link rel="apple-touch-icon" href="">
+   -->
+  
+    <link rel="stylesheet" href="/media/css/tnkr.css">
+  <link rel="stylesheet" href="/media/css/grid.css">
+  <link rel="stylesheet" href="/media/css/syntax.css">
+  
+      <script src="/media/js/libs/modernizr-1.7.min.js"></script>
+  
+  </head>
+<body id="recursive">
+
+     <div class="navbar">
+    <div class="container_8">
+     <div class="grid_1">
+       <a class="brand" href="#">tnkr</a>
+     </div>
+     <div class="grid_6">
+      <ul class="navlist">
+        <li><a id="blog" href="/blog">Blog</a></li>
+        <li><a href="about.html">About</a></li>
+      </ul>
+     </div>
+    </div>
+   </div>
+    <div class="clear"></div>
+  
+      <div class="container_8">
+        <div class="grid_1">
+          <div class="content-meta">
+                        <time datetime="2014-02-01" class="post-time">
+               Sat, 01 Feb 2014
+             </time>
+                     </div>
+        </div>
+
+      <div class="grid_6">
+                  <section class="content">
+          <article class="post">
+
+  <div class="post-title">
+    <a href="/blog/recursive.html">
+        Recursive Queries in pure SQL
+    </a>
+  </div>
+
+     <ul class="tags clear">
+         <li>
+      <a class="small" href="/blog/tags/happy.html">
+          happy
+      </a>
+     </li>
+         <li>
+      <a class="small" href="/blog/tags/thoughts.html">
+          thoughts
+      </a>
+     </li>
+       </ul>
+  
+  <div class="post-body">
+    <h3>A note on&nbsp;trees</h3>
+
+<p>Trees are a very common datastructure in computing. Abstract syntax trees, binary search trees, tries, file systems, etc&#8230; all tend to be trees.
+My personal favorite, one which I end up working with on a daily basis, is the <a href="http://en.wikipedia.org/wiki/Spaghetti_stack">cactus stack/spaghetti stack.</a> 
+It turns out that, thanks to indexes, this ends up mapping pretty well to a database, as each child contains information about the parent, but not the other way around 
+(as you&#8217;d typically see in a file system). A graph database would probably be a bit more ideal, as the branches would store the associativity. You could also do an additional closure
+table and store every parent-child and child-parent relationship so that all queries are just index scans, 
+but I think that typically has a bit more maintenance and storage cost than a basic tree structure would in a&nbsp;database.</p>
+<p>More than a few database systems support recursive queries in a few ways. You have your Common Table Expressions (<span class="caps">CTE</span>), suppored by <span class="caps">SQL</span> Server and Postgres, 
+<code>CONNECT BY</code> statements with oracle, and I don&#8217;t believe any sort of support exists in MySQL. So basically: <b>recursive queries aren&#8217;t portable across different
+systems</b>. Neither are stored procedures. But both are popular because they leverage shared memory in the database. Except that we can have shared memory too. 
+We have <span class="caps">SQL</span>. More importantly, all of these RDBMSs have temporary tables that are more or less the&nbsp;same.</p>
+<p>So first, we need our table with our nodes. You might have a <span class="caps">ROOT</span> node, with parent == null, or you won&#8217;t have a root node, and all your first level objects are root. Either is fine,
+for this example I&#8217;m having a <span class="caps">ROOT</span>&nbsp;node.</p>
+<div class="codehilite"><pre><span class="c1">--Folder is something like this:</span>
+<span class="k">insert</span> <span class="k">into</span> <span class="n">folder</span><span class="p">(</span><span class="n">pk</span><span class="p">,</span><span class="n">name</span><span class="p">)</span> <span class="k">values</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="s1">&#39;<span class="caps">ROOT</span>&#39;</span><span class="p">);</span>
+<span class="k">insert</span> <span class="k">into</span> <span class="n">folder</span><span class="p">(</span><span class="n">pk</span><span class="p">,</span><span class="n">name</span><span class="p">,</span><span class="n">parent</span><span class="p">)</span> <span class="k">values</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="s1">&#39;Folder1&#39;</span><span class="p">,</span><span class="mi">0</span><span class="p">);</span>
+<span class="k">insert</span> <span class="k">into</span> <span class="n">folder</span><span class="p">(</span><span class="n">pk</span><span class="p">,</span><span class="n">name</span><span class="p">,</span><span class="n">parent</span><span class="p">)</span> <span class="k">values</span> <span class="p">(</span><span class="mi">2</span><span class="p">,</span><span class="s1">&#39;Folder2&#39;</span><span class="p">,</span><span class="mi">0</span><span class="p">);</span>
+<span class="k">insert</span> <span class="k">into</span> <span class="n">folder</span><span class="p">(</span><span class="n">pk</span><span class="p">,</span><span class="n">name</span><span class="p">,</span><span class="n">parent</span><span class="p">)</span> <span class="k">values</span> <span class="p">(</span><span class="mi">3</span><span class="p">,</span><span class="s1">&#39;Folder3&#39;</span><span class="p">,</span><span class="mi">0</span><span class="p">);</span>
+<span class="k">insert</span> <span class="k">into</span> <span class="n">folder</span><span class="p">(</span><span class="n">pk</span><span class="p">,</span><span class="n">name</span><span class="p">,</span><span class="n">parent</span><span class="p">)</span> <span class="k">values</span> <span class="p">(</span><span class="mi">4</span><span class="p">,</span><span class="s1">&#39;Folder1_1&#39;</span><span class="p">,</span><span class="mi">1</span><span class="p">);</span>
+<span class="k">insert</span> <span class="k">into</span> <span class="n">folder</span><span class="p">(</span><span class="n">pk</span><span class="p">,</span><span class="n">name</span><span class="p">,</span><span class="n">parent</span><span class="p">)</span> <span class="k">values</span> <span class="p">(</span><span class="mi">5</span><span class="p">,</span><span class="s1">&#39;Folder1_2&#39;</span><span class="p">,</span><span class="mi">1</span><span class="p">);</span>
+<span class="k">insert</span> <span class="k">into</span> <span class="n">folder</span><span class="p">(</span><span class="n">pk</span><span class="p">,</span><span class="n">name</span><span class="p">,</span><span class="n">parent</span><span class="p">)</span> <span class="k">values</span> <span class="p">(</span><span class="mi">6</span><span class="p">,</span><span class="s1">&#39;Folder2_1&#39;</span><span class="p">,</span><span class="mi">2</span><span class="p">);</span>
+<span class="k">insert</span> <span class="k">into</span> <span class="n">folder</span><span class="p">(</span><span class="n">pk</span><span class="p">,</span><span class="n">name</span><span class="p">,</span><span class="n">parent</span><span class="p">)</span> <span class="k">values</span> <span class="p">(</span><span class="mi">7</span><span class="p">,</span><span class="s1">&#39;Folder3_1&#39;</span><span class="p">,</span><span class="mi">3</span><span class="p">);</span>
+</pre></div>
+
+
+<p>So, besides our <span class="caps">DDL</span> create/drop our temporary table, we have to do some operatiosn with the table, namely populate&nbsp;it. </p>
+<p>Since we have a root object, the easiest thing to do is to just throw that into the temporary table, with an added value &#8216;lvl&#8217; of 0 to denote that it&#8217;s at the root&nbsp;level. </p>
+<p>Next, we iteratively insert into the temporary table, incrementing lvl on the client side as we go, with the following query until it stops inserting rows. 
+(In the query, this is denoted as :{x} or :{x+1}.)
+The query uses the highest lvl of the temporary table for a half-join (<span class="caps">IN</span>) operation for the folder&nbsp;table.</p>
+<div class="codehilite"><pre><span class="c1">--Filetree looks like (pk,name,parent,lvl,path)</span>
+<span class="k">insert</span> <span class="k">into</span> <span class="n">filetree</span> 
+  <span class="k">select</span> <span class="n">child</span><span class="p">.</span><span class="n">folder</span> <span class="n">pk</span><span class="p">,</span> 
+    <span class="n">child</span><span class="p">.</span><span class="n">name</span> <span class="n">name</span><span class="p">,</span>
+    <span class="n">child</span><span class="p">.</span><span class="n">parent</span> <span class="n">parent</span><span class="p">,</span> 
+    <span class="p">:</span><span class="err">{</span><span class="n">x</span><span class="o">+</span><span class="mi">1</span><span class="err">}</span> <span class="n">lvl</span><span class="p">,</span> 
+    <span class="p">(</span><span class="k">select</span> <span class="n">path</span> <span class="o">||</span> <span class="s1">&#39;/&#39;</span> <span class="o">||</span> <span class="n">name</span> <span class="k">from</span> <span class="n">filetree</span> <span class="k">where</span> <span class="n">pk</span> <span class="o">=</span> <span class="n">child</span><span class="p">.</span><span class="n">parent</span><span class="p">)</span> <span class="n">fullpath</span><span class="p">,</span> <span class="c1">--not necessary</span>
+  <span class="k">from</span> <span class="n">folder</span> <span class="n">child</span> 
+  <span class="k">where</span> <span class="n">child</span><span class="p">.</span><span class="n">parent</span> <span class="k">in</span> <span class="p">(</span><span class="k">select</span> <span class="n">pk</span> <span class="k">from</span> <span class="n">filetree</span> <span class="k">where</span> <span class="n">lvl</span> <span class="o">=</span> <span class="p">:</span><span class="err">{</span><span class="n">x</span><span class="err">}</span><span class="p">)</span>
+</pre></div>
+
+
+<p>And you got your code, something like this right after the first&nbsp;insert:</p>
+<div class="codehilite"><pre><span class="n">i</span> <span class="o">=</span> <span class="mi">0</span>
+<span class="k">while</span><span class="p">(</span><span class="n">curs</span><span class="o">.</span><span class="n">rowcount</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">):</span>
+  <span class="n">curs</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="n">sqlstmt</span><span class="p">,</span> <span class="n">x</span><span class="o">+</span><span class="mi">1</span><span class="p">,</span> <span class="n">x</span><span class="p">)</span>
+  <span class="n">i</span><span class="o">+=</span><span class="mi">1</span>
+</pre></div>
+
+
+<p>I&#8217;m not sure as to the performance of <span class="caps">DDL</span> and creating/dropping temporary tables across all database systems, but I was able to outperform Oracle&#8217;s <code>CONNECT BY</code>
+statement by 20% even with <span class="caps">DDL</span> statements for my use case. In addition to that, it was much more flexible than <code>CONNECT BY</code> because <code>CONNECT BY</code> doesn&#8217;t like 
+nested subqueries for it&#8217;s start parameters. It&#8217;s also more flexible, and I&#8217;m pretty sure it&#8217;s more portable. In addition, I was able to sort my results as I 
+went, and doing a &#8216;select * from filetree&#8217; returned them in order in&nbsp;oracle.</p>
+<p>Your final bit of code would actually be to populate a tree object from the results iteratively. There&#8217;s different ways of doing this. 
+You could sort by lvl, parent, name, and then descend into the results and backtrack. If you keep the fullpath you can sort by that&nbsp;too.</p>  </div>
+
+<nav class="post-nav">
+
+
+<p>
+
+  Next: <a class="post-nav-title"
+    title="A Happy Post"
+    href="/blog/happy-post.html"
+    >A Happy Post</a>
+</p>
+
+<br>
+
+<!--
+<div id="twitter_share">
+<a href="http://twitter.com/share"
+    class="twitter-share-button"
+    data-count="vertical"
+    data-via="">Tweet</a>
+    <script type="text/javascript"
+        src="http://platform.twitter.com/widgets.js"></script>
+</div>
+<div id="facebook_like">
+<iframe src="http://www.facebook.com/plugins/like.php?href&amp;layout=box_count&amp;show_faces=false&amp;width=450&amp;action=like&amp;font=arial&amp;colorscheme=light&amp;height=65"
+            scrolling="no"
+            frameborder="0"
+            style="border:none; overflow:hidden; width:450px; height:65px;"
+            allowTransparency="true"></iframe>
+</div>
+-->
+</nav>
+
+
+</article>          </section>
+              </div>
+    </div>
+
+  <div class="clear"></div>
+
+
+  
+      <!-- Grab Google CDN's jQuery, with a protocol relative URL; fall back to local if necessary -->
+  <script src="//ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js"></script>
+  
+    
+
+      
+  
+</body>
+</html>

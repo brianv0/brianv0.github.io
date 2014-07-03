@@ -175,3 +175,22 @@ li {
 .post-time {
    font-size: 11px;
 }
+
+code {
+   margin: 0;
+   border: 1px solid #ddd;
+   background-color: #f0f0f0;
+   border-radius: 3px;
+   padding: 0;
+   font-size: 12px;
+}
+
+code:before {
+  content: "\00a0";
+  letter-spacing: -0.2em;
+}
+
+code:after {
+  content: "\00a0";
+  letter-spacing: -0.2em;
+}

@@ -14,6 +14,7 @@ markdown:
         - def_list
         - tables
         - headerid
+        - codehilite
 context:
     data:
         menu:

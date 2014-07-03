@@ -13,9 +13,10 @@
 
   {% block favicons %}
   <!-- Place favicon.ico & apple-touch-icon.png
-        in the root of your domain and delete these references -->
-  <link rel="shortcut icon" href="{{ media_url('/favicon.ico') }}">
-  <link rel="apple-touch-icon" href="{{ media_url('/apple-touch-icon.png') }}">
+        in the root of your domain and delete these references 
+  <link rel="shortcut icon" href="">
+  <link rel="apple-touch-icon" href="">
+   -->
   {% endblock favicons %}
 
   {% block css %}
@@ -50,11 +51,17 @@
   <div class="clear"></div>
   {% block content %}
 
-    <div class="container_8">
-      <div class="grid_1">
-        <div class="content-meta">
+      <div class="container_8">
+        <div class="grid_1">
+          <div class="content-meta">
+           {% if resource.meta.blogdate %}
+             <time datetime="{{ resource.meta.created.strftime('%Y-%m-%d') }}" class="post-time">
+               {{ resource.meta.created.strftime('%a, %d %b %Y') }}
+             </time>
+           {% endif %}
+          </div>
         </div>
-      </div>
+
       <div class="grid_6">
         {% block container %}
           <section class="content">
