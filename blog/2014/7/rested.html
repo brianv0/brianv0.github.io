@@ -1,0 +1,212 @@
+<!doctype html>
+
+<head>
+    <meta charset="">
+
+  <title>Making ZooKeeper well RESTed</title>
+  <meta name="description" content="Messing around with some SQL code.
+">
+  <meta name="author" content="Brian">
+
+  <!--  Mobile viewport optimized: j.mp/bplateviewport -->
+  <meta name="viewport" content="">
+
+    <!-- Place favicon.ico & apple-touch-icon.png
+        in the root of your domain and delete these references 
+  <link rel="shortcut icon" href="">
+  <link rel="apple-touch-icon" href="">
+   -->
+  
+    <link rel="stylesheet" href="/media/css/tnkr.css">
+  <link rel="stylesheet" href="/media/css/grid.css">
+  <link rel="stylesheet" href="/media/css/syntax.css">
+  
+    
+  </head>
+<body id="rested">
+
+      <div class="navbar">
+    <div class="container_8">
+     <div class="grid_1">
+       <a class="brand" href="">tnkr</a>
+     </div>
+     <div class="grid_6">
+      <ul class="navlist">
+
+                <li>
+            <a title="Home Page"
+                                href="/index.html">Home</a>
+        </li>        <li>
+            <a title="Blog"
+                                href="/blog">Blog</a>
+        </li>        <li>
+            <a title="About"
+                                href="/about.html">About</a>
+        </li>      </ul>
+     </div>
+    </div>
+   </div>
+  
+  <div class="clear"></div>
+  
+      <div class="container_8">
+        <div class="grid_1">
+          <div class="content-meta">
+                        <time datetime="2013-07-03" class="post-time">
+               Wed, 03 Jul 2013
+             </time>
+                     </div>
+        </div>
+
+      <div class="grid_6">
+                  <section class="content">
+          <article class="post">
+
+  <div class="post-title">
+    <a href="/blog/2014/7/rested.html">
+        Making ZooKeeper well RESTed
+    </a>
+  </div>
+
+     <ul class="tags clear">
+         <li>
+      <a class="small" href="/blog/tags/code.html">
+          code
+      </a>
+     </li>
+       </ul>
+  
+  <div class="post-body">
+    <h2 id="draft"><span class="caps">DRAFT</span></h2>
+<p>I&#8217;ve audited a few database courses at Stanford, so I&#8217;m more relatively familiar with paxos.
+I&#8217;m also familiar with Google&#8217;s Chubby, having read the paper over a few times. My interest
+in Chubby mostly comes from the fact that I work on software that is inherently &#8220;file-like&#8221;, 
+what we call &#8220;DataCatalog&#8221; at <span class="caps">SLAC</span>. However, the DataCatalog is meant largely to be a 
+virtual file system for datasets, with some convincing features like searching metadata.
+One thing it doesn&#8217;t have, however, is a lock service. That used to not matter very much,
+because all interaction with the DataCatalog was primarily local, with clients interacting
+directly with the database. Going forward, however, science is rapidly decentralizing, and
+the need to support remote clients means one thing: relying on port 80 and RESTful&nbsp;APIs.</p>
+<p>So, going forward, I realized I needed some sort of locking mechanism. I was planning on 
+going ahead and using ZooKeeper with this, and storing some sort of state, but I realized
+what might be more useful was if there was a true ZooKeeper RESTful client. This wouldn&#8217;t 
+only be useful for the DataCatalog RESTful server (for purposes of locking), but it 
+would also be very useful for service discovery, job barriers, etc&#8230;
+Of course, there exists <a href="https://github.com/coreos/etcd">etcd</a>, but it&#8217;s a very young
+project, with core features being temporarily deprecated until they can nail the <span class="caps">API</span> down,
+and I want something more solid. Also, it&#8217;s in Go. My boss has been using java since
+before I could multiply, and Go has almost non-existent uptake in the greater scientific
+community, so that&#8217;s a bit of a non-starter for me. I&#8217;m hoping to use Kafka on some 
+projects to replace a lot of what we still use email for, among other things, 
+and Kafka relies on ZooKeeper. So, if I end up using anything, it&#8217;s going to be&nbsp;ZooKeeper.</p>
+<h2 id="restful-api">RESTful&nbsp;<span class="caps">API</span>?</h2>
+<p>ZooKeeper does have a RESTful <span class="caps">API</span> in the contrib directory. It&#8217;s pretty okay for doing
+things like listing nodes. It has no support for events, and it&#8217;s kind of strange how
+sessions work, in the sense that it&#8217;s kind of magic, and not&nbsp;RESTful.</p>
+<p>What I&#8217;ve been want is a more complete <span class="caps">REST</span> api, including long-polling for events,
+optionally returning events events that have happened since from a given zxid when
+supplied with the paths, enough information about the ZooKeeper session state
+so the state can be represented, and a connection reestablished at any time. Basically,
+create the connection, cache it on the server, send enough information about it&#8217;s state 
+back to the <span class="caps">REST</span> client so that the session can be reestablished at any point in time, 
+from any java container. In a sense, much more RESTful than what we can get currently.
+In addition to that, you can query the &#8220;events&#8221; resource with any zxid and retrieve
+the changes to any objects since then, or long-poll and wait for&nbsp;changes.</p>
+<h3 id="semi-stateless-client">Semi-Stateless&nbsp;client</h3>
+<p>Unfortunately, what I&#8217;d like isn&#8217;t so easy with the current ZooKeeper client. The
+client&#8217;s ession state is splayed across four classes - <code>ZooKeeper</code>, <code>ClientCnxn</code>,
+<code>ClientCnxnSocket</code>, and <code>ClientCnxnSocketNIO</code>. I&#8217;ve done some work of divorcing
+these classes of local state, and created an <code>ClientCnxnState</code> class which now 
+holds that information. The idea is that a representation of that class can be 
+sent back to the client. This would probably be done via headers, and the client
+would have the option of using only the ZooKeeper client session <span class="caps">ID</span>, in the case
+that only basic usage was needed, or possibly using all of it. Other features this
+new semi-stateless client would have is that pings are now optional, and controlled 
+by <code>ClientCnxnState</code>. This makes a lot of sense for it&#8217;s use as a proxy, as you end
+up with a 1:1 correspondence between the liveness of the <span class="caps">REST</span> client and the 
+liveness of the ZooKeeper proxy (plus additional&nbsp;latency).</p>
+<p>Another features is a <code>disconnect</code> method. This just closes the socket, but does
+not explicitly end the ZooKeeper session. In my opinion, this feature is missing 
+from the current ZooKeeper client. Currently, you just basically have to kill the 
+<span class="caps">JVM</span> or somehow hack in some code that closes the socket if you want to cleanly
+exit your process, with the hope of reconnecting to the server with the same
+session and&nbsp;password. </p>
+<h3 id="watch-and-ephemeral-node-behavior">Watch and ephemeral node&nbsp;behavior</h3>
+<p>Continuing on, even if you can disconnect, you still need to store your watches
+somewhere and reconstruct all event handlers if you&nbsp;restart.</p>
+<p>See, the way ZooKeeper works now is that watches on the server database are tightly 
+coupled with the ServerCnxn object. So if a client disconnects the underlying <span class="caps">NIO</span>
+connection, the watches are removed on the&nbsp;server.</p>
+<p>Again, for clarity: The watches are, in fact, not tied to the session. They are 
+tied only to a connection. It is up to the client to set watches on a&nbsp;restart.</p>
+<p>But there&#8217;s no clean <span class="caps">API</span> for doing that if you&#8217;ve exited your process. I think the
+way you&#8217;d need to go about doing that is to make sure to serialize your watcher to 
+disk somehow, reestablish the watcher on <code>ZooKeeper</code> re-initialization, and make sure
+you have some system flag&nbsp;set.</p>
+<p>This  assumes that the connection has died, however. What if you don&#8217;t want to locally 
+track all of your client watches, you just want to make sure the events hit your&nbsp;watcher?</p>
+<p>Starting with the ZooKeeper 3.5, it may actually be possible to discover which watches
+are set on the server for a connection that&#8217;s still alive. Currently, you need to store
+that information locally. In a sense, what currently exists is a bit more RESTful, as
+watches could be viewed as &#8220;cached&#8221; until the socket is closed. The client can, at any
+time, <span class="caps">POST</span> to the server with a zxid and retrieve any changes since then. The slight
+caveat of that is if you post multiple paths, you end up caching that watch until the 
+socket is closed. But the added support is nice because you can potentially discover
+a list of all watches that have been set, where as you must keep track of that
+information locally&nbsp;currently.</p>
+<p>Ephemeral nodes survive through disconnects, however. Their existence is determined 
+solely by the lifetime of the session. When the server doesn&#8217;t hear from the client 
+in the timeout range, it assumes the client is dead, removes the watches, and reaps
+the session. This is pretty standard&nbsp;expected.</p>  </div>
+
+<nav class="post-nav">
+
+
+<p>
+
+  Next: <a class="post-nav-title"
+    title="Recursive Queries in pure SQL"
+    href="/blog/2013/6/recursive.html"
+    >Recursive Queries in pure SQL</a>
+</p>
+
+<br>
+
+<!--
+<div id="twitter_share">
+<a href="http://twitter.com/share"
+    class="twitter-share-button"
+    data-count="vertical"
+    data-via="">Tweet</a>
+    <script type="text/javascript"
+        src="http://platform.twitter.com/widgets.js"></script>
+</div>
+<div id="facebook_like">
+<iframe src="http://www.facebook.com/plugins/like.php?href&amp;layout=box_count&amp;show_faces=false&amp;width=450&amp;action=like&amp;font=arial&amp;colorscheme=light&amp;height=65"
+            scrolling="no"
+            frameborder="0"
+            style="border:none; overflow:hidden; width:450px; height:65px;"
+            allowTransparency="true"></iframe>
+</div>
+-->
+</nav>
+
+
+</article>          </section>
+              </div>
+    </div>
+
+  <div class="clear"></div>
+
+  
+  <div class="footer"></div>
+
+      <!-- Grab Google CDN's jQuery, with a protocol relative URL; fall back to local if necessary -->
+  <script src="//ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js"></script>
+  
+    
+
+      
+  
+</body>
+</html>

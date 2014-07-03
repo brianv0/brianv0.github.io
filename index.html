@@ -61,24 +61,32 @@
 
     <article class=post>
    <div class="excerpt-title">
-     <a href="/blog/2013/6/recursive.html">Recursive Queries in pure SQL</a>
+     <a href="/blog/2014/7/rested.html">Making ZooKeeper well RESTed</a>
    </div>
-   <time datetime="2013-06-26" class="post-time">
-      Posted: Wed, 26 Jun 2013
+   <time datetime="2013-07-03" class="post-time">
+      Posted: Wed, 03 Jul 2013
    </time>
-   <a href="/blog/2013/6/recursive.html"></a>
-    <p>More than a few database systems support recursive queries in a few ways. You have your Common Table Expressions (<span class="caps">CTE</span>), suppored by <span class="caps">SQL</span> Server and Postgres, 
-<code>CONNECT BY</code> statements with oracle, and I don&#8217;t believe any sort of support exists in MySQL. So basically: <strong>recursive queries aren&#8217;t portable across different
-systems</strong>. Neither are stored procedures. But both are popular because they leverage shared memory in the database. Except that we can have shared memory too. 
-We have <span class="caps">SQL</span>. More importantly, all of these RDBMSs have temporary tables that are more or less the&nbsp;same.</p>
-<p>So first, we need our table with our nodes. You might have a <span class="caps">ROOT</span> node, with parent == null, or you won&#8217;t have a root node, and all your first level objects are root. Either is fine,
-for this example I&#8217;m having a <span class="caps">ROOT</span>&nbsp;node.</p>
+   <a href="/blog/2014/7/rested.html"></a>
+    <p>I&#8217;ve audited a few database courses at Stanford, so I&#8217;m more relatively familiar with paxos.
+I&#8217;m also familiar with Google&#8217;s Chubby, having read the paper over a few times. My interest
+in Chubby mostly comes from the fact that I work on software that is inherently &#8220;file-like&#8221;, 
+what we call &#8220;DataCatalog&#8221; at <span class="caps">SLAC</span>. However, the DataCatalog is meant largely to be a 
+virtual file system for datasets, with some convincing features like searching metadata.
+One thing it doesn&#8217;t have, however, is a lock service. That used to not matter very much,
+because all interaction with the DataCatalog was primarily local, with clients interacting
+directly with the database. Going forward, however, science is rapidly decentralizing, and
+the need to support remote clients means one thing: relying on port 80 and RESTful&nbsp;APIs.</p>
+<p>So, going forward, I realized I needed some sort of locking mechanism. I was planning on 
+going ahead and using ZooKeeper with this, and storing some sort of state, but I realized
+what might be more useful was if there was a true ZooKeeper RESTful client. This wouldn&#8217;t 
+only be useful for the DataCatalog RESTful server (for purposes of locking), but it 
+would also be very useful for service discovery, job barriers,&nbsp;etc&#8230;</p>
 
 </article>
 
 
 <a class="button white medium"
-    href="/blog/2013/6/recursive.html">Read more&hellip;</a>
+    href="/blog/2014/7/rested.html">Read more&hellip;</a>
 </section>
 
           </section>

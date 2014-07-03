@@ -7,10 +7,104 @@
         <link href="/"/>
     
         
-    <updated>2014-07-03T13:19:43Z</updated>
+    <updated>2014-07-03T16:25:21Z</updated>
 
     <id>/blog/atom.xml/</id>
 
+            <entry>
+            <title type="html">Making ZooKeeper well RESTed</title>
+            <author><name>Brian</name></author>
+            <link href="/blog/2014/7/rested.html"/>
+            <updated>2013-07-03T13:30:00Z</updated>
+            <published>2013-07-03T13:30:00Z</published>
+            <id>/blog/2014/7/rested.html</id>
+                        <category   scheme="/blog/tags"
+                        term="code"
+                        label="Code" />
+            
+            <content type="html">
+                                &lt;h2 id=&#34;draft&#34;&gt;&lt;span class=&#34;caps&#34;&gt;DRAFT&lt;/span&gt;&lt;/h2&gt;
+&lt;p&gt;I&amp;#8217;ve audited a few database courses at Stanford, so I&amp;#8217;m more relatively familiar with paxos.
+I&amp;#8217;m also familiar with Google&amp;#8217;s Chubby, having read the paper over a few times. My interest
+in Chubby mostly comes from the fact that I work on software that is inherently &amp;#8220;file-like&amp;#8221;, 
+what we call &amp;#8220;DataCatalog&amp;#8221; at &lt;span class=&#34;caps&#34;&gt;SLAC&lt;/span&gt;. However, the DataCatalog is meant largely to be a 
+virtual file system for datasets, with some convincing features like searching metadata.
+One thing it doesn&amp;#8217;t have, however, is a lock service. That used to not matter very much,
+because all interaction with the DataCatalog was primarily local, with clients interacting
+directly with the database. Going forward, however, science is rapidly decentralizing, and
+the need to support remote clients means one thing: relying on port 80 and RESTful&amp;nbsp;APIs.&lt;/p&gt;
+&lt;p&gt;So, going forward, I realized I needed some sort of locking mechanism. I was planning on 
+going ahead and using ZooKeeper with this, and storing some sort of state, but I realized
+what might be more useful was if there was a true ZooKeeper RESTful client. This wouldn&amp;#8217;t 
+only be useful for the DataCatalog RESTful server (for purposes of locking), but it 
+would also be very useful for service discovery, job barriers, etc&amp;#8230;
+Of course, there exists &lt;a href=&#34;https://github.com/coreos/etcd&#34;&gt;etcd&lt;/a&gt;, but it&amp;#8217;s a very young
+project, with core features being temporarily deprecated until they can nail the &lt;span class=&#34;caps&#34;&gt;API&lt;/span&gt; down,
+and I want something more solid. Also, it&amp;#8217;s in Go. My boss has been using java since
+before I could multiply, and Go has almost non-existent uptake in the greater scientific
+community, so that&amp;#8217;s a bit of a non-starter for me. I&amp;#8217;m hoping to use Kafka on some 
+projects to replace a lot of what we still use email for, among other things, 
+and Kafka relies on ZooKeeper. So, if I end up using anything, it&amp;#8217;s going to be&amp;nbsp;ZooKeeper.&lt;/p&gt;
+&lt;h2 id=&#34;restful-api&#34;&gt;RESTful&amp;nbsp;&lt;span class=&#34;caps&#34;&gt;API&lt;/span&gt;?&lt;/h2&gt;
+&lt;p&gt;ZooKeeper does have a RESTful &lt;span class=&#34;caps&#34;&gt;API&lt;/span&gt; in the contrib directory. It&amp;#8217;s pretty okay for doing
+things like listing nodes. It has no support for events, and it&amp;#8217;s kind of strange how
+sessions work, in the sense that it&amp;#8217;s kind of magic, and not&amp;nbsp;RESTful.&lt;/p&gt;
+&lt;p&gt;What I&amp;#8217;ve been want is a more complete &lt;span class=&#34;caps&#34;&gt;REST&lt;/span&gt; api, including long-polling for events,
+optionally returning events events that have happened since from a given zxid when
+supplied with the paths, enough information about the ZooKeeper session state
+so the state can be represented, and a connection reestablished at any time. Basically,
+create the connection, cache it on the server, send enough information about it&amp;#8217;s state 
+back to the &lt;span class=&#34;caps&#34;&gt;REST&lt;/span&gt; client so that the session can be reestablished at any point in time, 
+from any java container. In a sense, much more RESTful than what we can get currently.
+In addition to that, you can query the &amp;#8220;events&amp;#8221; resource with any zxid and retrieve
+the changes to any objects since then, or long-poll and wait for&amp;nbsp;changes.&lt;/p&gt;
+&lt;h3 id=&#34;semi-stateless-client&#34;&gt;Semi-Stateless&amp;nbsp;client&lt;/h3&gt;
+&lt;p&gt;Unfortunately, what I&amp;#8217;d like isn&amp;#8217;t so easy with the current ZooKeeper client. The
+client&amp;#8217;s ession state is splayed across four classes - &lt;code&gt;ZooKeeper&lt;/code&gt;, &lt;code&gt;ClientCnxn&lt;/code&gt;,
+&lt;code&gt;ClientCnxnSocket&lt;/code&gt;, and &lt;code&gt;ClientCnxnSocketNIO&lt;/code&gt;. I&amp;#8217;ve done some work of divorcing
+these classes of local state, and created an &lt;code&gt;ClientCnxnState&lt;/code&gt; class which now 
+holds that information. The idea is that a representation of that class can be 
+sent back to the client. This would probably be done via headers, and the client
+would have the option of using only the ZooKeeper client session &lt;span class=&#34;caps&#34;&gt;ID&lt;/span&gt;, in the case
+that only basic usage was needed, or possibly using all of it. Other features this
+new semi-stateless client would have is that pings are now optional, and controlled 
+by &lt;code&gt;ClientCnxnState&lt;/code&gt;. This makes a lot of sense for it&amp;#8217;s use as a proxy, as you end
+up with a 1:1 correspondence between the liveness of the &lt;span class=&#34;caps&#34;&gt;REST&lt;/span&gt; client and the 
+liveness of the ZooKeeper proxy (plus additional&amp;nbsp;latency).&lt;/p&gt;
+&lt;p&gt;Another features is a &lt;code&gt;disconnect&lt;/code&gt; method. This just closes the socket, but does
+not explicitly end the ZooKeeper session. In my opinion, this feature is missing 
+from the current ZooKeeper client. Currently, you just basically have to kill the 
+&lt;span class=&#34;caps&#34;&gt;JVM&lt;/span&gt; or somehow hack in some code that closes the socket if you want to cleanly
+exit your process, with the hope of reconnecting to the server with the same
+session and&amp;nbsp;password. &lt;/p&gt;
+&lt;h3 id=&#34;watch-and-ephemeral-node-behavior&#34;&gt;Watch and ephemeral node&amp;nbsp;behavior&lt;/h3&gt;
+&lt;p&gt;Continuing on, even if you can disconnect, you still need to store your watches
+somewhere and reconstruct all event handlers if you&amp;nbsp;restart.&lt;/p&gt;
+&lt;p&gt;See, the way ZooKeeper works now is that watches on the server database are tightly 
+coupled with the ServerCnxn object. So if a client disconnects the underlying &lt;span class=&#34;caps&#34;&gt;NIO&lt;/span&gt;
+connection, the watches are removed on the&amp;nbsp;server.&lt;/p&gt;
+&lt;p&gt;Again, for clarity: The watches are, in fact, not tied to the session. They are 
+tied only to a connection. It is up to the client to set watches on a&amp;nbsp;restart.&lt;/p&gt;
+&lt;p&gt;But there&amp;#8217;s no clean &lt;span class=&#34;caps&#34;&gt;API&lt;/span&gt; for doing that if you&amp;#8217;ve exited your process. I think the
+way you&amp;#8217;d need to go about doing that is to make sure to serialize your watcher to 
+disk somehow, reestablish the watcher on &lt;code&gt;ZooKeeper&lt;/code&gt; re-initialization, and make sure
+you have some system flag&amp;nbsp;set.&lt;/p&gt;
+&lt;p&gt;This  assumes that the connection has died, however. What if you don&amp;#8217;t want to locally 
+track all of your client watches, you just want to make sure the events hit your&amp;nbsp;watcher?&lt;/p&gt;
+&lt;p&gt;Starting with the ZooKeeper 3.5, it may actually be possible to discover which watches
+are set on the server for a connection that&amp;#8217;s still alive. Currently, you need to store
+that information locally. In a sense, what currently exists is a bit more RESTful, as
+watches could be viewed as &amp;#8220;cached&amp;#8221; until the socket is closed. The client can, at any
+time, &lt;span class=&#34;caps&#34;&gt;POST&lt;/span&gt; to the server with a zxid and retrieve any changes since then. The slight
+caveat of that is if you post multiple paths, you end up caching that watch until the 
+socket is closed. But the added support is nice because you can potentially discover
+a list of all watches that have been set, where as you must keep track of that
+information locally&amp;nbsp;currently.&lt;/p&gt;
+&lt;p&gt;Ephemeral nodes survive through disconnects, however. Their existence is determined 
+solely by the lifetime of the session. When the server doesn&amp;#8217;t hear from the client 
+in the timeout range, it assumes the client is dead, removes the watches, and reaps
+the session. This is pretty standard&amp;nbsp;expected.&lt;/p&gt;            </content>
+        </entry>
             <entry>
             <title type="html">Recursive Queries in pure SQL</title>
             <author><name>Brian</name></author>

@@ -62,6 +62,33 @@
 <li>
         <article >
    <div class="excerpt-title">
+     <a href="/blog/2014/7/rested.html">Making ZooKeeper well RESTed</a>
+   </div>
+   <time datetime="2013-07-03" class="post-time">
+      Posted: Wed, 03 Jul 2013
+   </time>
+   <a href="/blog/2014/7/rested.html"></a>
+    <p>I&#8217;ve audited a few database courses at Stanford, so I&#8217;m more relatively familiar with paxos.
+I&#8217;m also familiar with Google&#8217;s Chubby, having read the paper over a few times. My interest
+in Chubby mostly comes from the fact that I work on software that is inherently &#8220;file-like&#8221;, 
+what we call &#8220;DataCatalog&#8221; at <span class="caps">SLAC</span>. However, the DataCatalog is meant largely to be a 
+virtual file system for datasets, with some convincing features like searching metadata.
+One thing it doesn&#8217;t have, however, is a lock service. That used to not matter very much,
+because all interaction with the DataCatalog was primarily local, with clients interacting
+directly with the database. Going forward, however, science is rapidly decentralizing, and
+the need to support remote clients means one thing: relying on port 80 and RESTful&nbsp;APIs.</p>
+<p>So, going forward, I realized I needed some sort of locking mechanism. I was planning on 
+going ahead and using ZooKeeper with this, and storing some sort of state, but I realized
+what might be more useful was if there was a true ZooKeeper RESTful client. This wouldn&#8217;t 
+only be useful for the DataCatalog RESTful server (for purposes of locking), but it 
+would also be very useful for service discovery, job barriers,&nbsp;etc&#8230;</p>
+
+</article>
+
+</li>
+<li>
+        <article >
+   <div class="excerpt-title">
      <a href="/blog/2013/6/recursive.html">Recursive Queries in pure SQL</a>
    </div>
    <time datetime="2013-06-26" class="post-time">
