@@ -7,7 +7,7 @@
         <link href="/"/>
     
         
-    <updated>2014-07-03T12:33:29Z</updated>
+    <updated>2014-07-03T12:46:42Z</updated>
 
     <id>/blog/excerpts.xml/</id>
 
@@ -15,12 +15,12 @@
             <title type="html">Recursive Queries in pure SQL</title>
             <author><name>Brian</name></author>
             <link href="/blog/recursive.html"/>
-            <updated>2014-02-01T10:00:00Z</updated>
-            <published>2014-02-01T10:00:00Z</published>
+            <updated>2013-06-26T14:30:00Z</updated>
+            <published>2013-06-26T14:30:00Z</published>
             <id>/blog/recursive.html</id>
                         <category   scheme="/blog/tags"
-                        term="happy"
-                        label="Happy" />
+                        term="code"
+                        label="Code" />
                         <category   scheme="/blog/tags"
                         term="thoughts"
                         label="Thoughts" />
@@ -28,74 +28,10 @@
             <content type="html">
                 
                 &lt;p&gt;More than a few database systems support recursive queries in a few ways. You have your Common Table Expressions (&lt;span class=&#34;caps&#34;&gt;CTE&lt;/span&gt;), suppored by &lt;span class=&#34;caps&#34;&gt;SQL&lt;/span&gt; Server and Postgres, 
-&lt;code&gt;CONNECT BY&lt;/code&gt; statements with oracle, and I don&amp;#8217;t believe any sort of support exists in MySQL. So basically: &lt;b&gt;recursive queries aren&amp;#8217;t portable across different
-systems&lt;/b&gt;. Neither are stored procedures. But both are popular because they leverage shared memory in the database. Except that we can have shared memory too. 
+&lt;code&gt;CONNECT BY&lt;/code&gt; statements with oracle, and I don&amp;#8217;t believe any sort of support exists in MySQL. So basically: &lt;strong&gt;recursive queries aren&amp;#8217;t portable across different
+systems&lt;/strong&gt;. Neither are stored procedures. But both are popular because they leverage shared memory in the database. Except that we can have shared memory too. 
 We have &lt;span class=&#34;caps&#34;&gt;SQL&lt;/span&gt;. More importantly, all of these RDBMSs have temporary tables that are more or less the&amp;nbsp;same.&lt;/p&gt;
 &lt;p&gt;So first, we need our table with our nodes. You might have a &lt;span class=&#34;caps&#34;&gt;ROOT&lt;/span&gt; node, with parent == null, or you won&amp;#8217;t have a root node, and all your first level objects are root. Either is fine,
 for this example I&amp;#8217;m having a &lt;span class=&#34;caps&#34;&gt;ROOT&lt;/span&gt;&amp;nbsp;node.&lt;/p&gt;            </content>
-        </entry>
-            <entry>
-            <title type="html">A Happy Post</title>
-            <author><name>Brian</name></author>
-            <link href="/blog/happy-post.html"/>
-            <updated>2011-02-01T10:00:00Z</updated>
-            <published>2011-02-01T10:00:00Z</published>
-            <id>/blog/happy-post.html</id>
-                        <category   scheme="/blog/tags"
-                        term="happy"
-                        label="Happy" />
-                        <category   scheme="/blog/tags"
-                        term="thoughts"
-                        label="Thoughts" />
-            
-            <content type="html">
-                &lt;p&gt;&lt;img alt=&#34;Airport&#34; src=&#34;/media/images/airport.png&#34; /&gt;&lt;/p&gt;
-                &lt;p&gt;Lady Malvern was a hearty, happy, healthy, overpowering sort of dashed female,
-not so very tall but making up for it by measuring about six feet from the
-&lt;span class=&#34;caps&#34;&gt;O.P.&lt;/span&gt; to the Prompt&amp;nbsp;Side.&lt;/p&gt;            </content>
-        </entry>
-            <entry>
-            <title type="html">An Angry Post</title>
-            <author><name>Brian</name></author>
-            <link href="/blog/angry-post.html"/>
-            <updated>2011-01-01T10:00:00Z</updated>
-            <published>2011-01-01T10:00:00Z</published>
-            <id>/blog/angry-post.html</id>
-                        <category   scheme="/blog/tags"
-                        term="angry"
-                        label="Angry" />
-                        <category   scheme="/blog/tags"
-                        term="thoughts"
-                        label="Thoughts" />
-            
-            <content type="html">
-                &lt;p&gt;&lt;img alt=&#34;Airport&#34; src=&#34;/media/images/airport.png&#34; /&gt;&lt;/p&gt;
-                &lt;p&gt;To complete the character-study of Mr. Worple, he was a man of extremely
-uncertain temper, and his general tendency was to think that Corky was a poor
-chump and that whatever step he took in any direction on his own account, was
-just another proof of his innate idiocy. I should imagine Jeeves feels very
-much the same about&amp;nbsp;me.&lt;/p&gt;            </content>
-        </entry>
-            <entry>
-            <title type="html">A Sad Post</title>
-            <author><name>Brian</name></author>
-            <link href="/blog/sad-post.html"/>
-            <updated>2010-12-01T10:00:00Z</updated>
-            <published>2010-12-01T10:00:00Z</published>
-            <id>/blog/sad-post.html</id>
-                        <category   scheme="/blog/tags"
-                        term="sad"
-                        label="Sad" />
-                        <category   scheme="/blog/tags"
-                        term="thoughts"
-                        label="Thoughts" />
-            
-            <content type="html">
-                &lt;p&gt;&lt;img alt=&#34;A Dark Image&#34; src=&#34;/media/images/dark.png&#34; /&gt;&lt;/p&gt;
-                &lt;p&gt;I went and dressed sadly. It will show you pretty well how pipped I was when I
-tell you that I near as a toucher put on a white tie with a dinner-jacket. I
-sallied out for a bit of food more to pass the time than because I wanted it.
-It seemed brutal to be wading into the bill of fare with poor old Bicky headed
-for the&amp;nbsp;breadline.&lt;/p&gt;            </content>
         </entry>
     </feed>

@@ -63,13 +63,13 @@
    <div class="excerpt-title">
      <a href="/blog/recursive.html">Recursive Queries in pure SQL</a>
    </div>
-   <time datetime="2014-02-01" class="post-time">
-      Posted: Sat, 01 Feb 2014
+   <time datetime="2013-06-26" class="post-time">
+      Posted: Wed, 26 Jun 2013
    </time>
    <a href="/blog/recursive.html"></a>
     <p>More than a few database systems support recursive queries in a few ways. You have your Common Table Expressions (<span class="caps">CTE</span>), suppored by <span class="caps">SQL</span> Server and Postgres, 
-<code>CONNECT BY</code> statements with oracle, and I don&#8217;t believe any sort of support exists in MySQL. So basically: <b>recursive queries aren&#8217;t portable across different
-systems</b>. Neither are stored procedures. But both are popular because they leverage shared memory in the database. Except that we can have shared memory too. 
+<code>CONNECT BY</code> statements with oracle, and I don&#8217;t believe any sort of support exists in MySQL. So basically: <strong>recursive queries aren&#8217;t portable across different
+systems</strong>. Neither are stored procedures. But both are popular because they leverage shared memory in the database. Except that we can have shared memory too. 
 We have <span class="caps">SQL</span>. More importantly, all of these RDBMSs have temporary tables that are more or less the&nbsp;same.</p>
 <p>So first, we need our table with our nodes. You might have a <span class="caps">ROOT</span> node, with parent == null, or you won&#8217;t have a root node, and all your first level objects are root. Either is fine,
 for this example I&#8217;m having a <span class="caps">ROOT</span>&nbsp;node.</p>

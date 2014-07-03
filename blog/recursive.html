@@ -4,7 +4,7 @@
     <meta charset="">
 
   <title>Recursive Queries in pure SQL</title>
-  <meta name="description" content="Smile. Laugh.
+  <meta name="description" content="Messing around with some SQL code.
 ">
   <meta name="author" content="Brian">
 
@@ -53,8 +53,8 @@
       <div class="container_8">
         <div class="grid_1">
           <div class="content-meta">
-                        <time datetime="2014-02-01" class="post-time">
-               Sat, 01 Feb 2014
+                        <time datetime="2013-06-26" class="post-time">
+               Wed, 26 Jun 2013
              </time>
                      </div>
         </div>
@@ -71,8 +71,8 @@
 
      <ul class="tags clear">
          <li>
-      <a class="small" href="/blog/tags/happy.html">
-          happy
+      <a class="small" href="/blog/tags/code.html">
+          code
       </a>
      </li>
          <li>
@@ -83,8 +83,7 @@
        </ul>
   
   <div class="post-body">
-    <h3>A note on&nbsp;trees</h3>
-
+    <h3 id="a-note-on-trees">A note on&nbsp;trees</h3>
 <p>Trees are a very common datastructure in computing. Abstract syntax trees, binary search trees, tries, file systems, etc&#8230; all tend to be trees.
 My personal favorite, one which I end up working with on a daily basis, is the <a href="http://en.wikipedia.org/wiki/Spaghetti_stack">cactus stack/spaghetti stack.</a> 
 It turns out that, thanks to indexes, this ends up mapping pretty well to a database, as each child contains information about the parent, but not the other way around 
@@ -92,8 +91,8 @@ It turns out that, thanks to indexes, this ends up mapping pretty well to a data
 table and store every parent-child and child-parent relationship so that all queries are just index scans, 
 but I think that typically has a bit more maintenance and storage cost than a basic tree structure would in a&nbsp;database.</p>
 <p>More than a few database systems support recursive queries in a few ways. You have your Common Table Expressions (<span class="caps">CTE</span>), suppored by <span class="caps">SQL</span> Server and Postgres, 
-<code>CONNECT BY</code> statements with oracle, and I don&#8217;t believe any sort of support exists in MySQL. So basically: <b>recursive queries aren&#8217;t portable across different
-systems</b>. Neither are stored procedures. But both are popular because they leverage shared memory in the database. Except that we can have shared memory too. 
+<code>CONNECT BY</code> statements with oracle, and I don&#8217;t believe any sort of support exists in MySQL. So basically: <strong>recursive queries aren&#8217;t portable across different
+systems</strong>. Neither are stored procedures. But both are popular because they leverage shared memory in the database. Except that we can have shared memory too. 
 We have <span class="caps">SQL</span>. More importantly, all of these RDBMSs have temporary tables that are more or less the&nbsp;same.</p>
 <p>So first, we need our table with our nodes. You might have a <span class="caps">ROOT</span> node, with parent == null, or you won&#8217;t have a root node, and all your first level objects are root. Either is fine,
 for this example I&#8217;m having a <span class="caps">ROOT</span>&nbsp;node.</p>
@@ -120,7 +119,8 @@ The query uses the highest lvl of the temporary table for a half-join (<span cla
     <span class="n">child</span><span class="p">.</span><span class="n">name</span> <span class="n">name</span><span class="p">,</span>
     <span class="n">child</span><span class="p">.</span><span class="n">parent</span> <span class="n">parent</span><span class="p">,</span> 
     <span class="p">:</span><span class="err">{</span><span class="n">x</span><span class="o">+</span><span class="mi">1</span><span class="err">}</span> <span class="n">lvl</span><span class="p">,</span> 
-    <span class="p">(</span><span class="k">select</span> <span class="n">path</span> <span class="o">||</span> <span class="s1">&#39;/&#39;</span> <span class="o">||</span> <span class="n">name</span> <span class="k">from</span> <span class="n">filetree</span> <span class="k">where</span> <span class="n">pk</span> <span class="o">=</span> <span class="n">child</span><span class="p">.</span><span class="n">parent</span><span class="p">)</span> <span class="n">fullpath</span><span class="p">,</span> <span class="c1">--not necessary</span>
+     <span class="c1">-- The following isn&#39;t strictly necessary</span>
+    <span class="p">(</span><span class="k">select</span> <span class="n">path</span> <span class="o">||</span> <span class="s1">&#39;/&#39;</span> <span class="o">||</span> <span class="n">name</span> <span class="k">from</span> <span class="n">filetree</span> <span class="k">where</span> <span class="n">pk</span> <span class="o">=</span> <span class="n">child</span><span class="p">.</span><span class="n">parent</span><span class="p">)</span> <span class="n">fullpath</span><span class="p">,</span> 
   <span class="k">from</span> <span class="n">folder</span> <span class="n">child</span> 
   <span class="k">where</span> <span class="n">child</span><span class="p">.</span><span class="n">parent</span> <span class="k">in</span> <span class="p">(</span><span class="k">select</span> <span class="n">pk</span> <span class="k">from</span> <span class="n">filetree</span> <span class="k">where</span> <span class="n">lvl</span> <span class="o">=</span> <span class="p">:</span><span class="err">{</span><span class="n">x</span><span class="err">}</span><span class="p">)</span>
 </pre></div>
@@ -144,13 +144,6 @@ You could sort by lvl, parent, name, and then descend into the results and backt
 <nav class="post-nav">
 
 
-<p>
-
-  Next: <a class="post-nav-title"
-    title="A Happy Post"
-    href="/blog/happy-post.html"
-    >A Happy Post</a>
-</p>
 
 <br>
 

@@ -1,16 +1,17 @@
 ---
 title: Recursive Queries in pure SQL
 description: >
-    Smile. Laugh.
-created: !!timestamp '2014-02-01 10:00:00'
-blogdate: !!timestamp '2014-02-01 10:00:00'
+    Messing around with some SQL code.
+created: !!timestamp '2013-06-26 14:30:00'
+modified: !!timestamp '2013-06-27 14:30:00'
+blogdate: True
 tags:
-    - happy
+    - code
     - thoughts
 ---
 
 
-<h3>A note on trees</h3>
+### A note on trees
 Trees are a very common datastructure in computing. Abstract syntax trees, binary search trees, tries, file systems, etc... all tend to be trees.
 My personal favorite, one which I end up working with on a daily basis, is the <a href="http://en.wikipedia.org/wiki/Spaghetti_stack">cactus stack/spaghetti stack.</a> 
 It turns out that, thanks to indexes, this ends up mapping pretty well to a database, as each child contains information about the parent, but not the other way around 
@@ -20,8 +21,8 @@ but I think that typically has a bit more maintenance and storage cost than a ba
 
 {% mark excerpt -%}
 More than a few database systems support recursive queries in a few ways. You have your Common Table Expressions (CTE), suppored by SQL Server and Postgres, 
-`CONNECT BY` statements with oracle, and I don't believe any sort of support exists in MySQL. So basically: <b>recursive queries aren't portable across different
-systems</b>. Neither are stored procedures. But both are popular because they leverage shared memory in the database. Except that we can have shared memory too. 
+`CONNECT BY` statements with oracle, and I don't believe any sort of support exists in MySQL. So basically: __recursive queries aren't portable across different
+systems__. Neither are stored procedures. But both are popular because they leverage shared memory in the database. Except that we can have shared memory too. 
 We have SQL. More importantly, all of these RDBMSs have temporary tables that are more or less the same.
 
 So first, we need our table with our nodes. You might have a ROOT node, with parent == null, or you won't have a root node, and all your first level objects are root. Either is fine,
@@ -57,7 +58,8 @@ The query uses the highest lvl of the temporary table for a half-join (IN) opera
         child.name name,
         child.parent parent, 
         :{x+1} lvl, 
-        (select path || '/' || name from filetree where pk = child.parent) fullpath, --not necessary
+         -- The following isn't strictly necessary
+        (select path || '/' || name from filetree where pk = child.parent) fullpath, 
       from folder child 
       where child.parent in (select pk from filetree where lvl = :{x})
 
